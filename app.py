@@ -1,4 +1,5 @@
 import math
+import base64
 from pathlib import Path
 from datetime import datetime
 
@@ -186,6 +187,13 @@ def analyze_video_cached(video_path_str: str):
     return analyze_video(Path(video_path_str))
 
 
+@st.cache_data(show_spinner=False)
+def video_data_url(video_path_str: str):
+    video_bytes = Path(video_path_str).read_bytes()
+    encoded = base64.b64encode(video_bytes).decode("utf-8")
+    return f"data:video/mp4;base64,{encoded}"
+
+
 def pod_quality_score(img_rgb):
     sharp = variance_of_laplacian(img_rgb)
     bright = brightness_score(img_rgb)
@@ -290,7 +298,15 @@ main_tab, pod_tab, epod_tab, qa_tab = st.tabs(["Delivery video", "POD authentici
 
 with main_tab:
     st.subheader("Delivery clip and stop-readiness analytics")
-    st.video(str(VIDEO_PATH))
+    st.markdown(
+        f"""
+        <video controls loop autoplay muted playsinline style="width: 100%; border-radius: 0.5rem;">
+            <source src="{video_data_url(str(VIDEO_PATH))}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        """,
+        unsafe_allow_html=True,
+    )
     if video_info:
         st.write(f"Video: {video_info['w']}x{video_info['h']} | {video_info['duration_s']:.1f}s | {video_info['fps']:.1f} fps")
     c1, c2 = st.columns([1.2, 1])
