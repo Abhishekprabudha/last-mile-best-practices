@@ -1,5 +1,6 @@
 streamlit>=1.45,<2
-opencv-python-headless==4.9.0.80
+opencv-python-headless==4.9.0.80; python_version < "3.13"
+opencv-python-headless>=4.12,<5; python_version >= "3.13"
 numpy==1.26.4; python_version < "3.13"
 numpy>=2.2,<3; python_version >= "3.13"
 pandas==2.2.1; python_version < "3.13"
