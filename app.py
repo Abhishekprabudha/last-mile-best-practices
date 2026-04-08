@@ -17,6 +17,8 @@ REF_RECIPIENT = ASSETS / "reference_recipient.jpg"
 GENUINE_POD = ASSETS / "genuine_pod.jpg"
 NON_GENUINE_POD = ASSETS / "non_genuine_pod.jpg"
 
+FACE_CASCADE = cv2.CascadeClassifier(str(Path(cv2.data.haarcascades) / "haarcascade_frontalface_default.xml"))
+
 ADDRESS_BOOK = {
     "Pune Customer Drop": {"lat": 18.5204, "lon": 73.8567, "eta": 11.8, "window": "11:30-12:30", "customer": "MRM Carriers Pvt. Ltd."},
     "Ahmedabad Consignee": {"lat": 23.0225, "lon": 72.5714, "eta": 9.2, "window": "09:00-10:00", "customer": "ARS Divine Ltd"},
@@ -96,8 +98,7 @@ def hist_similarity(a_rgb, b_rgb):
 
 def detect_face(img_rgb):
     gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
-    cascade = cv2.CascadeClassifier(str(Path(cv2.data.haarcascades) / "haarcascade_frontalface_default.xml"))
-    faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
+    faces = FACE_CASCADE.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
     if faces is None or len(faces) == 0:
         return False
     return True
@@ -178,6 +179,11 @@ def analyze_video(video_path: Path):
         "cabin_motion_avg": float(df["motion"].mean()),
     }
     return info, df
+
+
+@st.cache_data(show_spinner=False)
+def analyze_video_cached(video_path_str: str):
+    return analyze_video(Path(video_path_str))
 
 
 def pod_quality_score(img_rgb):
@@ -266,7 +272,7 @@ def answer_question(question, video_df, epod_ok, pod_verdict, distance_km):
 st.title("Last Mile AI Agent - POD, Location, and ePOD Validation Demo")
 st.caption("Streamlit demo for GitHub deployment using the included delivery clip and POD images.")
 
-video_info, video_df = analyze_video(VIDEO_PATH)
+video_info, video_df = analyze_video_cached(str(VIDEO_PATH))
 if "qa_log" not in st.session_state:
     st.session_state.qa_log = []
 if "epod_state" not in st.session_state:
@@ -293,8 +299,8 @@ with main_tab:
             st.line_chart(video_df.set_index("t_sec")[["sharpness", "brightness", "motion"]])
             st.dataframe(video_df, use_container_width=True)
     with c2:
-        st.image(str(REF_LOCATION), caption="Reference drop-location context", use_container_width=True)
-        st.image(str(REF_RECIPIENT), caption="Reference recipient / handoff context", use_container_width=True)
+        st.image(str(REF_LOCATION), caption="Reference drop-location context", use_column_width=True)
+        st.image(str(REF_RECIPIENT), caption="Reference recipient / handoff context", use_column_width=True)
         st.markdown(
             """
             **What the AI agent checks in last mile:**
@@ -310,9 +316,9 @@ with pod_tab:
     st.subheader("Genuine vs non-genuine POD demonstration")
     a, b = st.columns(2)
     with a:
-        st.image(str(GENUINE_POD), caption="Reference genuine POD", use_container_width=True)
+        st.image(str(GENUINE_POD), caption="Reference genuine POD", use_column_width=True)
     with b:
-        st.image(str(NON_GENUINE_POD), caption="Reference non-genuine / weak POD", use_container_width=True)
+        st.image(str(NON_GENUINE_POD), caption="Reference non-genuine / weak POD", use_column_width=True)
 
     upload = st.file_uploader("Upload a POD image to validate", type=["jpg", "jpeg", "png"], key="pod_upload")
     if upload is not None:
@@ -322,7 +328,7 @@ with pod_tab:
         if candidate is not None and genuine is not None and non_genuine is not None:
             authenticity, verdict, sim_good, sim_bad, m = classify_pod(candidate, genuine, non_genuine)
             st.session_state.epod_state["pod_verdict"] = verdict
-            st.image(candidate, caption="Uploaded POD", use_container_width=True)
+            st.image(candidate, caption="Uploaded POD", use_column_width=True)
             x1, x2, x3 = st.columns(3)
             x1.metric("Authenticity score", f"{authenticity:.0f}/100")
             x2.metric("Similarity to genuine ref", f"{sim_good:.2f}")
